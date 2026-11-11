@@ -46,8 +46,8 @@ export function parsePacket(rawBytes) {
   }
 
   const flagsAndType = dv.getUint8(3);
-  const packetType = flagsAndType & 0x0f;
-  const panelId = (flagsAndType >>> 4) & 0x03;
+  const packetType = flagsAndType & 0x07;
+  const panelId = (flagsAndType >>> 3) & 0x07;
   const flags = flagsAndType & 0xc0;
 
   const sessionId = dv.getUint32(4, false);

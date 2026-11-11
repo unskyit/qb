@@ -1,5 +1,5 @@
 /**
- * QuadBeam UI, Adaptive Layout, Theme, & PWA Verification Tests
+ * QuadBeam UI, Strict Square 1/2/4/6 QR Layout, Theme, & PWA Verification Tests
  */
 
 import test from 'node:test';
@@ -8,45 +8,67 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { computeSafeQrLayout, resolveTransmissionSettings } from '../../src/sender/transmission-settings.js';
+import {
+  computeSafeQrLayout,
+  resolveTransmissionSettings,
+  getGridDimensionsForCount
+} from '../../src/sender/transmission-settings.js';
 import { DEFAULT_PREFERENCES } from '../../src/core/state.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
-test('Adaptive QR Layout switches from 4 panels on desktop to 2 or 1 panel on small mobile viewports', () => {
-  // Desktop 1440x900 -> 4 QR panels
-  const desktop = computeSafeQrLayout({
+test('Strict 1:1 Square QR Layout supports 1, 2, 4, and 6 QR panels across desktop and small mobile viewports', () => {
+  // Desktop 1440x900 -> 4 QR panels (2x2) and 6 QR panels (3x2)
+  const desktop4 = computeSafeQrLayout({
     viewportWidth: 1440,
     viewportHeight: 900,
     requestedQrCount: 4,
-    requestedBlockSize: 220
+    requestedBlockSize: 160,
+    strictHonorCount: true
   });
-  assert.equal(desktop.qrCount, 4);
-  assert.equal(desktop.gridColumns, 2);
-  assert.equal(desktop.gridRows, 2);
+  assert.equal(desktop4.qrCount, 4);
+  assert.equal(desktop4.gridColumns, 2);
+  assert.equal(desktop4.gridRows, 2);
 
-  // Compact mobile 340x560 -> automatically reduces to fewer panels or lower density for safe module size
-  const smallMobile = computeSafeQrLayout({
-    viewportWidth: 340,
-    viewportHeight: 560,
-    requestedQrCount: 4,
-    requestedBlockSize: 320
+  const desktop6 = computeSafeQrLayout({
+    viewportWidth: 1440,
+    viewportHeight: 900,
+    requestedQrCount: 6,
+    requestedBlockSize: 160,
+    strictHonorCount: true
   });
-  assert.ok(smallMobile.qrCount <= 2, `Expected <= 2 panels on 340px viewport, got ${smallMobile.qrCount}`);
-  assert.equal(smallMobile.landscapeRecommended, true);
+  assert.equal(desktop6.qrCount, 6);
+  assert.equal(desktop6.gridColumns, 3);
+  assert.equal(desktop6.gridRows, 2);
+
+  // Small / low-DPI mobile 340x560 honoring 1, 2, 4, and 6 QR codes with compact square sizing
+  for (const cnt of [1, 2, 4, 6]) {
+    const mobile = computeSafeQrLayout({
+      viewportWidth: 340,
+      viewportHeight: 560,
+      requestedQrCount: cnt,
+      requestedBlockSize: 160,
+      strictHonorCount: true
+    });
+    assert.equal(mobile.qrCount, cnt);
+    assert.ok(mobile.panelSizePx >= 68 && mobile.panelSizePx <= 320);
+  }
+
+  // Portrait 6 QR -> 2 columns x 3 rows
+  const dims6Portrait = getGridDimensionsForCount(6, false);
+  assert.deepEqual(dims6Portrait, { cols: 2, rows: 3 });
 
   // Manual override when autoMode is false
-  const manualPrefs = { ...DEFAULT_PREFERENCES, autoMode: false, profile: 'custom', qrCount: 4, fps: 30 };
+  const manualPrefs = { ...DEFAULT_PREFERENCES, autoMode: false, profile: 'custom', qrCount: 6, fps: 30 };
   const manual = resolveTransmissionSettings(manualPrefs, 360, 640, false);
-  assert.equal(manual.qrCount, 4);
+  assert.equal(manual.qrCount, 6);
   assert.equal(manual.fps, 30);
 });
 
 test('Light and Dark AMOLED Theme tokens match exact specification colors', () => {
   const tokensCss = fs.readFileSync(path.join(ROOT, 'src/styles/tokens.css'), 'utf8');
 
-  // Light theme colors
   assert.match(tokensCss, /#F7F9FC/i);
   assert.match(tokensCss, /#FFFFFF/i);
   assert.match(tokensCss, /#EEF3FA/i);
@@ -56,7 +78,6 @@ test('Light and Dark AMOLED Theme tokens match exact specification colors', () =
   assert.match(tokensCss, /#E8F1FF/i);
   assert.match(tokensCss, /#DFE7F2/i);
 
-  // Dark AMOLED theme colors
   assert.match(tokensCss, /#050608/i);
   assert.match(tokensCss, /#10131A/i);
   assert.match(tokensCss, /#181D27/i);

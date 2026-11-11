@@ -1,7 +1,7 @@
 /**
  * QuadBeam Sender Controller
  * Manages multi-file transfer queue, file validation, streaming SHA-256 computation,
- * optional AES-256-GCM encryption, optical calibration stream, and live 1/2/4-QR transmission.
+ * optional AES-256-GCM encryption, optical calibration stream, and live 1/2/4/6-QR transmission.
  */
 
 import { ChunkedFileSource } from './file-reader.js';
@@ -38,10 +38,6 @@ export class SenderController {
     this.gridRenderer = new QrGridRenderer(containerEl);
   }
 
-  /**
-   * Add one or more File objects to the sender queue.
-   * Validates max file size and sanitizes filenames without claiming transmission has started.
-   */
   addFiles(fileList) {
     const maxBytes = (appState.preferences.maxFileSizeMiB || 50) * 1024 * 1024;
     const added = [];
@@ -61,7 +57,7 @@ export class SenderController {
         filename: sanitizeFilename(file.name),
         fileSize: file.size,
         mimeType: file.type || 'application/octet-stream',
-        status: 'queued', // 'queued' | 'hashing' | 'transmitting' | 'paused' | 'completed' | 'skipped' | 'error'
+        status: 'queued',
         sha256Hex: null,
         hashProgress: 0,
         previewUrl: null
@@ -117,9 +113,38 @@ export class SenderController {
   }
 
   /**
-   * Start optical calibration stream (displays probe QR codes to test camera readability).
+   * Render idle preview squares matching the current viewport/stage dimensions and QR count.
    */
-  startCalibrationStream(viewportWidth, viewportHeight, isFullscreen = false) {
+  renderIdlePreview(viewportWidth = 1024, viewportHeight = 768, isFullscreen = false, stageWidth = 0, stageHeight = 0) {
+    if (!this.gridRenderer) return;
+    this.activeConfig = resolveTransmissionSettings(
+      appState.preferences,
+      viewportWidth,
+      viewportHeight,
+      isFullscreen,
+      stageWidth,
+      stageHeight
+    );
+    this.gridRenderer.configure({
+      qrCount: this.activeConfig.qrCount,
+      panelSizePx: this.activeConfig.panelSizePx,
+      gridColumns: this.activeConfig.gridColumns,
+      gridRows: this.activeConfig.gridRows,
+      gapPx: this.activeConfig.gapPx,
+      ecLevel: this.activeConfig.ecLevel,
+      wireEncoding: appState.preferences.wireEncoding,
+      highContrast: appState.preferences.highContrastQr
+    });
+    const idlePackets = Array.from({ length: this.activeConfig.qrCount }, (_, i) =>
+      new TextEncoder().encode(`QUADBEAM-READY-CH-${i + 1}`)
+    );
+    this.gridRenderer.renderFramePackets(
+      idlePackets,
+      idlePackets.map((_, i) => `CH ${i + 1} · READY`)
+    );
+  }
+
+  startCalibrationStream(viewportWidth, viewportHeight, isFullscreen = false, stageWidth = 0, stageHeight = 0) {
     this.frameScheduler.stop();
     this.isCalibrating = true;
     this.calibrationSeq = 0;
@@ -129,7 +154,9 @@ export class SenderController {
       appState.preferences,
       viewportWidth,
       viewportHeight,
-      isFullscreen
+      isFullscreen,
+      stageWidth,
+      stageHeight
     );
 
     if (this.gridRenderer) {
@@ -138,6 +165,7 @@ export class SenderController {
         panelSizePx: this.activeConfig.panelSizePx,
         gridColumns: this.activeConfig.gridColumns,
         gridRows: this.activeConfig.gridRows,
+        gapPx: this.activeConfig.gapPx,
         ecLevel: this.activeConfig.ecLevel,
         wireEncoding: appState.preferences.wireEncoding,
         highContrast: appState.preferences.highContrastQr
@@ -148,13 +176,12 @@ export class SenderController {
     this.frameScheduler.start(this.activeConfig.fps);
   }
 
-  /**
-   * Start transmitting the active file in the queue.
-   */
   async startTransmission({
     viewportWidth = 1024,
     viewportHeight = 768,
     isFullscreen = false,
+    stageWidth = 0,
+    stageHeight = 0,
     password = ''
   } = {}) {
     const activeItem = this.getActiveItem();
@@ -172,7 +199,9 @@ export class SenderController {
       appState.preferences,
       viewportWidth,
       viewportHeight,
-      isFullscreen
+      isFullscreen,
+      stageWidth,
+      stageHeight
     );
 
     let encryptionMode = 0;
@@ -229,6 +258,7 @@ export class SenderController {
         panelSizePx: this.activeConfig.panelSizePx,
         gridColumns: this.activeConfig.gridColumns,
         gridRows: this.activeConfig.gridRows,
+        gapPx: this.activeConfig.gapPx,
         ecLevel: this.activeConfig.ecLevel,
         wireEncoding: appState.preferences.wireEncoding,
         highContrast: appState.preferences.highContrastQr
@@ -250,24 +280,30 @@ export class SenderController {
     this.frameScheduler.start(this.activeConfig.fps);
   }
 
-  /**
-   * Dynamically reconfigure QR count, FPS, or viewport size during live transmission.
-   */
-  reconfigureLiveLayout(viewportWidth, viewportHeight, isFullscreen = false) {
-    if (!this.activeConfig) return;
+  reconfigureLiveLayout(viewportWidth, viewportHeight, isFullscreen = false, stageWidth = 0, stageHeight = 0) {
     const nextConfig = resolveTransmissionSettings(
       appState.preferences,
       viewportWidth,
       viewportHeight,
-      isFullscreen
+      isFullscreen,
+      stageWidth,
+      stageHeight
     );
+
+    if (!this.packetScheduler && !this.isCalibrating) {
+      this.renderIdlePreview(viewportWidth, viewportHeight, isFullscreen, stageWidth, stageHeight);
+      appEvents.emit('sender:layout-updated', this.activeConfig);
+      return;
+    }
+
     this.activeConfig = {
-      ...this.activeConfig,
+      ...(this.activeConfig || {}),
       qrCount: nextConfig.qrCount,
       fps: nextConfig.fps,
       panelSizePx: nextConfig.panelSizePx,
       gridColumns: nextConfig.gridColumns,
       gridRows: nextConfig.gridRows,
+      gapPx: nextConfig.gapPx,
       autoReducedReason: nextConfig.autoReducedReason,
       landscapeRecommended: nextConfig.landscapeRecommended
     };
@@ -278,12 +314,14 @@ export class SenderController {
         panelSizePx: this.activeConfig.panelSizePx,
         gridColumns: this.activeConfig.gridColumns,
         gridRows: this.activeConfig.gridRows,
+        gapPx: this.activeConfig.gapPx,
         ecLevel: this.activeConfig.ecLevel,
         wireEncoding: appState.preferences.wireEncoding,
         highContrast: appState.preferences.highContrastQr
       });
     }
     this.frameScheduler.setTargetFps(this.activeConfig.fps);
+    this._renderNextTransmissionFrame();
     appEvents.emit('sender:layout-updated', this.activeConfig);
   }
 
@@ -313,9 +351,9 @@ export class SenderController {
     appEvents.emit('sender:status', { state: nextState, item });
   }
 
-  async restart(viewportWidth, viewportHeight, isFullscreen = false) {
+  async restart(viewportWidth, viewportHeight, isFullscreen = false, stageWidth = 0, stageHeight = 0) {
     this.stop();
-    await this.startTransmission({ viewportWidth, viewportHeight, isFullscreen });
+    await this.startTransmission({ viewportWidth, viewportHeight, isFullscreen, stageWidth, stageHeight });
   }
 
   stop() {
@@ -325,21 +363,6 @@ export class SenderController {
     appEvents.emit('sender:status', { state: 'idle', item: this.getActiveItem() });
   }
 
-  async nextFileInQueue(viewportWidth, viewportHeight, isFullscreen = false) {
-    if (this.activeQueueIndex + 1 < this.queue.length) {
-      const cur = this.getActiveItem();
-      if (cur && cur.status === 'transmitting') cur.status = 'completed';
-      this.activeQueueIndex += 1;
-      appState.setRuntime({ activeSenderIndex: this.activeQueueIndex });
-      await this.startTransmission({ viewportWidth, viewportHeight, isFullscreen });
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Apply a Repair Request QR string from the receiver to prioritize missing blocks.
-   */
   applyReceiverRepairCode(repairQrString) {
     if (!this.packetScheduler) {
       throw new Error('No active sender session to apply repair code');

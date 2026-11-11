@@ -4,7 +4,7 @@
  * 24-Byte Fixed Header + Variable Payload + 4-Byte CRC32 Trailer:
  * [0..1]   uint16 BE : Protocol Magic (0x5142 'QB')
  * [2]      uint8     : Protocol Version (1)
- * [3]      uint8     : Flags (bits 7..6) | Panel ID (bits 5..4) | Packet Type (bits 3..0)
+ * [3]      uint8     : Flags (bits 7..6) | Panel ID 0..7 (bits 5..3) | Packet Type 1..7 (bits 2..0)
  * [4..7]   uint32 BE : Session ID
  * [8..11]  uint32 BE : File / Transfer ID
  * [12..13] uint16 BE : Generation / Window ID
@@ -46,7 +46,7 @@ export function serializePacket({
   const packet = new Uint8Array(totalLength);
   const dv = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
 
-  const flagsAndType = ((flags & 0xc0) | ((panelId & 0x03) << 4) | (packetType & 0x0f)) & 0xff;
+  const flagsAndType = ((flags & 0xc0) | ((panelId & 0x07) << 3) | (packetType & 0x07)) & 0xff;
 
   dv.setUint16(0, PROTOCOL_MAGIC, false);
   dv.setUint8(2, PROTOCOL_VERSION);

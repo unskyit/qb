@@ -5,34 +5,35 @@
 
 import { appEvents } from './events.js';
 
-const STORAGE_KEY = 'quadbeam_preferences_v1';
+const STORAGE_KEY = 'quadbeam_preferences_v2';
 
 export const DEFAULT_PREFERENCES = Object.freeze({
   // Appearance
   theme: 'system', // 'light' | 'dark' | 'system'
   accent: 'calm-blue', // 'calm-blue' | 'cobalt' | 'cyan'
-  compactMode: false,
+  compactMode: true,
   reducedMotion: false,
-  density: 'comfortable', // 'comfortable' | 'compact'
+  density: 'compact', // 'comfortable' | 'compact'
 
-  // Transmission
-  autoMode: true,
+  // Transmission (Sender)
+  autoMode: false, // Honor selected QR count directly while sizing squares cleanly to viewport
   profile: 'balanced', // 'reliable' | 'balanced' | 'turbo' | 'custom'
-  qrCount: 4, // 1 | 2 | 4
+  qrCount: 4, // 1 | 2 | 4 | 6
   fps: 15, // 5 | 10 | 15 | 20 | 30 | 60
-  qrDensity: 'medium', // 'low' (140B) | 'medium' (220B) | 'high' (320B)
+  qrDensity: 'medium', // 'low' (110B) | 'medium' (160B) | 'high' (240B)
   ecLevel: 'M', // 'L' | 'M' | 'Q' | 'H'
-  redundancyPercent: 35, // Fountain code extra parity ratio %
-  wireEncoding: 'base45', // 'base45' (QR Alphanumeric) | 'byte' (QR 8-bit Byte)
+  redundancyPercent: 35,
+  wireEncoding: 'base45', // 'base45' | 'byte'
   highContrastQr: false,
   keepScreenAwake: true,
   experimentalTurbo: false,
 
-  // Camera & Receiver
+  // Camera & Receiver Input
+  receiverQrCount: 4, // 0 ('Auto') | 1 | 2 | 4 | 6
   preferredFacingMode: 'environment', // 'environment' | 'user'
   preferredResolution: '1080p', // '720p' | '1080p' | '4k'
   mirrorPreview: false,
-  decoderEngine: 'auto', // 'auto' | 'native-plus-js' | 'pure-js'
+  decoderEngine: 'auto', // 'auto' | 'pure-js'
 
   // Storage & Limits
   defaultSaveBehavior: 'picker', // 'picker' | 'download'
@@ -48,7 +49,7 @@ export class AppStateStore {
     this.preferences = this.loadPreferences();
     this.runtime = {
       activeView: 'home', // 'home' | 'send' | 'receive'
-      transferState: 'idle', // 'idle' | 'preparing' | 'calibrating' | 'transmitting' | 'receiving' | 'recovering' | 'verifying' | 'saving' | 'completed' | 'paused' | 'failed'
+      transferState: 'idle',
       capabilities: null,
       senderQueue: [],
       activeSenderIndex: 0,

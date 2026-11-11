@@ -1,43 +1,53 @@
 /**
- * QuadBeam Application Shell & View Layout Styles
+ * QuadBeam Single-Screen Zero-Scroll Application Shell & Layout Styles
+ * Optimized for compact desktop and small (< 250 DPI) mobile screens without page scrolling.
  */
+
+html,
+body {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
 
 .qb-app-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .qb-header {
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   z-index: 40;
   background-color: var(--qb-surface-primary);
   border-bottom: 1px solid var(--qb-border);
-  padding: 0.75rem 1.5rem;
+  padding: 0.35rem 0.75rem;
+  min-height: 46px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  box-shadow: var(--qb-shadow-sm);
+  gap: 0.5rem;
 }
 
 .qb-brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.45rem;
   text-decoration: none;
   color: var(--qb-text-primary);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .qb-brand-logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   flex-shrink: 0;
 }
 
@@ -47,14 +57,14 @@
 }
 
 .qb-brand-name {
-  font-size: 1.125rem;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .qb-brand-tagline {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: var(--qb-text-secondary);
   font-weight: 500;
 }
@@ -65,22 +75,24 @@
   align-items: center;
   background-color: var(--qb-surface-secondary);
   border: 1px solid var(--qb-border);
-  border-radius: var(--qb-radius-md);
-  padding: 0.22rem;
-  gap: 0.2rem;
+  border-radius: var(--qb-radius-sm);
+  padding: 2px;
+  gap: 2px;
 }
 
 .qb-mode-tab {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.95rem;
-  border-radius: var(--qb-radius-sm);
-  font-size: 0.875rem;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--qb-text-secondary);
   transition: all var(--qb-transition-fast);
-  min-height: 36px;
+  min-height: 28px;
+  white-space: nowrap;
 }
 
 .qb-mode-tab:hover {
@@ -96,57 +108,72 @@
 .qb-header-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.3rem;
+  flex-shrink: 0;
 }
 
 .qb-main {
   flex: 1;
+  min-height: 0;
   width: 100%;
-  max-width: 1220px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 1.75rem 1.5rem 6.5rem;
+  padding: 0.5rem 0.65rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  overflow: hidden;
 }
 
 .qb-view {
   display: none;
   flex-direction: column;
-  gap: 1.5rem;
+  flex: 1;
+  min-height: 0;
   width: 100%;
+  gap: 0.45rem;
+  overflow: hidden;
 }
 
 .qb-view.active {
   display: flex;
 }
 
-/* Hero Section */
-.qb-hero {
-  text-align: center;
-  max-width: 680px;
-  margin: 0.75rem auto 0.5rem;
+/* Clean, Fast Home View Centered in Single Screen */
+.qb-home-wrap {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 0.25rem;
+}
+
+.qb-hero {
+  text-align: center;
+  max-width: 540px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .qb-hero-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.35rem 0.85rem;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
   border-radius: 999px;
   background-color: var(--qb-accent-subtle);
   color: var(--qb-accent);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 600;
   border: 1px solid var(--qb-border);
 }
 
 .qb-hero-title {
-  font-size: clamp(1.85rem, 4vw, 2.75rem);
+  font-size: clamp(1.35rem, 3.5vw, 2rem);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -154,35 +181,37 @@
 }
 
 .qb-hero-subtitle {
-  font-size: clamp(1rem, 2vw, 1.15rem);
+  font-size: clamp(0.8rem, 1.8vw, 0.92rem);
   color: var(--qb-text-secondary);
-  max-width: 540px;
+  max-width: 440px;
 }
 
-/* Action Cards Grid */
+/* Compact Action Cards Grid */
 .qb-action-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.5rem;
-  max-width: 920px;
+  gap: 0.75rem;
+  max-width: 680px;
   width: 100%;
-  margin: 0.5rem auto;
 }
 
-/* Benefit Indicators Row */
+/* Compact Benefit Pills Row */
 .qb-benefits-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  max-width: 920px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  max-width: 680px;
   width: 100%;
-  margin: 0.25rem auto 0;
 }
 
-/* Two-Column Workspace for Send & Receive */
-.qb-workspace-grid {
-  display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  gap: 1.5rem;
-  align-items: start;
+/* Single-Page Vertical Stack for Send & Receive */
+.qb-singlepage-stack {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  overflow: hidden;
 }

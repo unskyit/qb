@@ -1,7 +1,7 @@
 /**
  * QuadBeam High-Performance Multi-QR Computer Vision & ISO/IEC 18004 Decoder
  *
- * Provides dual-engine decoding:
+ * Provides dual-engine decoding for 1, 2, 4, and 6 simultaneous QR panels:
  * 1. Native Browser BarcodeDetector API (when supported by hardware/OS)
  * 2. Built-in Pure-JS ISO/IEC 18004 Computer Vision + GF(256) Reed-Solomon Decoder
  *    - Integral-image local adaptive thresholding (robust to glare, shadows, brightness shifts)
@@ -9,14 +9,12 @@
  *    - Perspective homography & alignment-pattern sampling + 0/90/180/270 rotation handling
  *    - BCH (15,5) format error correction and BCH (18,6) version error correction
  *    - Full Berlekamp-Massey + Chien + Forney GF(256) Reed-Solomon block error correction
- *    - Multi-QR 1-panel, 2-panel, and 4-panel (2x2 quadrant) spatial localization
+ *    - Multi-QR 1-panel, 2-panel, 4-panel (2x2), and 6-panel (3x2 / 2x3) spatial localization
  */
 
 import {
   QR_MODE,
-  QR_EC_LEVEL,
   GF256_EXP,
-  GF256_LOG,
   gfMul,
   gfInv,
   getRSBlocks,
@@ -24,12 +22,10 @@ import {
   getBCHTypeInfo,
   getBCHTypeNumber,
   evaluateMask,
-  buildFunctionPatternMatrix,
-  ALIGNMENT_PATTERN_TABLE
+  buildFunctionPatternMatrix
 } from '../sender/qr-generator.js';
 import { BASE45_ALPHABET } from '../protocol/encoding.js';
 
-// Precompute all 32 valid 15-bit Format Info codewords for instant Hamming-distance decoding
 const FORMAT_INFO_TABLE = new Array(32);
 for (let data = 0; data < 32; data++) {
   FORMAT_INFO_TABLE[data] = {
@@ -39,7 +35,6 @@ for (let data = 0; data < 32; data++) {
   };
 }
 
-// Precompute all 34 valid 18-bit Version Info codewords (Versions 7..40)
 const VERSION_INFO_TABLE = new Array(41);
 for (let v = 7; v <= 40; v++) {
   VERSION_INFO_TABLE[v] = getBCHTypeNumber(v);
@@ -53,7 +48,7 @@ function popcount32(x) {
 }
 
 export function decodeFormatBits(rawFormat1, rawFormat2 = -1) {
-  let bestDist = 4; // Allow up to 3 bit errors
+  let bestDist = 4;
   let bestEntry = null;
 
   for (let i = 0; i < 32; i++) {
@@ -95,16 +90,10 @@ export function decodeVersionBits(rawVer1, rawVer2 = -1) {
   return bestVer;
 }
 
-/**
- * Full GF(256) Reed-Solomon Decoder (Berlekamp-Massey + Chien Search + Forney Algorithm)
- * Corrects up to floor(ecCount / 2) corrupted bytes in place.
- * Returns true if codeword is valid or successfully repaired, false if uncorrectable.
- */
 export function reedSolomonDecodeBlock(codeword, ecCount) {
   const N = codeword.length;
   if (ecCount <= 0) return true;
 
-  // 1. Compute syndromes S[0 .. ecCount-1] where S[i] = C(alpha^i)
   const syndromes = new Uint8Array(ecCount);
   let hasError = false;
   for (let i = 0; i < ecCount; i++) {
@@ -119,7 +108,6 @@ export function reedSolomonDecodeBlock(codeword, ecCount) {
 
   if (!hasError) return true;
 
-  // 2. Berlekamp-Massey to find Error Locator Polynomial sigma(x)
   let sigma = new Uint8Array([1]);
   let B = new Uint8Array([1]);
   let L = 0;
@@ -160,7 +148,6 @@ export function reedSolomonDecodeBlock(codeword, ecCount) {
     return false;
   }
 
-  // 3. Chien search to find error locations X_k = alpha^(N - 1 - pos)
   const errorLocations = [];
   const errorPowers = [];
   for (let i = 0; i < N; i++) {
@@ -182,7 +169,6 @@ export function reedSolomonDecodeBlock(codeword, ecCount) {
     return false;
   }
 
-  // 4. Compute Error Evaluator Polynomial omega(x) = S(x) * sigma(x) mod x^ecCount
   const omega = new Uint8Array(ecCount);
   for (let i = 0; i < ecCount; i++) {
     let sum = 0;
@@ -192,13 +178,11 @@ export function reedSolomonDecodeBlock(codeword, ecCount) {
     omega[i] = sum;
   }
 
-  // 5. Forney's algorithm to compute error magnitudes and correct codeword
   for (let k = 0; k < errorLocations.length; k++) {
     const pos = errorLocations[k];
     const power = errorPowers[k];
     const xInv = GF256_EXP[(255 - (power % 255)) % 255];
 
-    // Evaluate omega(X_k^-1)
     let num = 0;
     let xTerm = 1;
     for (let i = 0; i < ecCount; i++) {
@@ -206,7 +190,6 @@ export function reedSolomonDecodeBlock(codeword, ecCount) {
       xTerm = gfMul(xTerm, xInv);
     }
 
-    // Formal derivative sigma'(X_k^-1) in GF(2^8): odd terms only
     let den = 0;
     let xInvSq = gfMul(xInv, xInv);
     let xDerivTerm = 1;
@@ -223,17 +206,12 @@ export function reedSolomonDecodeBlock(codeword, ecCount) {
   return true;
 }
 
-/**
- * Decode a sampled binary QR module matrix (`Uint8Array(moduleCount * moduleCount)`)
- * into `{ rawValue, rawBytes, version, ecLevel, maskPattern }`.
- */
 export function decodeQrMatrix(modules, moduleCount) {
   const version = Math.round((moduleCount - 17) / 4);
   if (version < 1 || version > 40 || version * 4 + 17 !== moduleCount) {
     return null;
   }
 
-  // Read Format Information #1 (vertical & horizontal around top-left finder)
   let rawFormat1 = 0;
   for (let v = 0; v < 15; v++) {
     let bit;
@@ -243,7 +221,6 @@ export function decodeQrMatrix(modules, moduleCount) {
     if (bit) rawFormat1 |= 1 << v;
   }
 
-  // Read Format Information #2 (horizontal & vertical around top-right / bottom-left)
   let rawFormat2 = 0;
   for (let h = 0; h < 15; h++) {
     let bit;
@@ -259,7 +236,6 @@ export function decodeQrMatrix(modules, moduleCount) {
   const { ecNum, maskPattern } = formatInfo;
   const { isFunction } = buildFunctionPatternMatrix(version);
 
-  // Extract interleaved codewords following upward/downward 2-column zig-zag
   const rsBlocks = getRSBlocks(version, ecNum);
   let totalCodewords = 0;
   for (let i = 0; i < rsBlocks.length; i++) {
@@ -306,7 +282,6 @@ export function decodeQrMatrix(modules, moduleCount) {
     }
   }
 
-  // De-interleave RS blocks and apply Reed-Solomon error correction
   let maxDcCount = 0;
   let maxEcCount = 0;
   let totalDataBytes = 0;
@@ -353,7 +328,6 @@ export function decodeQrMatrix(modules, moduleCount) {
     dataOffset += dcLen;
   }
 
-  // Parse QR bitstream segments (MODE_ALPHA_NUM, MODE_8BIT_BYTE, MODE_NUMBER)
   let bitPos = 0;
   const totalBits = dataStream.length * 8;
   const readBits = (count) => {
@@ -373,7 +347,7 @@ export function decodeQrMatrix(modules, moduleCount) {
 
   while (bitPos + 4 <= totalBits) {
     const mode = readBits(4);
-    if (mode === 0) break; // Terminator
+    if (mode === 0) break;
 
     if (mode === QR_MODE.ALPHA_NUM) {
       const countBits = getLengthInBits(QR_MODE.ALPHA_NUM, version);
@@ -458,10 +432,6 @@ function rotateMatrix90CW(modules, n) {
   return out;
 }
 
-/**
- * Try decoding a sampled module matrix across all 4 cardinal orientations (0, 90, 180, 270 deg)
- * AND mirrored orientations (for front-facing mirrored webcams).
- */
 export function decodeQrMatrixAnyOrientation(modules, moduleCount, allowMirror = true) {
   let cur = modules;
   for (let rot = 0; rot < 4; rot++) {
@@ -499,10 +469,6 @@ export function decodeQrMatrixAnyOrientation(modules, moduleCount, allowMirror =
   return null;
 }
 
-/**
- * Compute adaptive binary image (1 = dark, 0 = light) from RGBA ImageData
- * using integral-image local window mean thresholding.
- */
 export function binarizeImageData(imageData, subRect = null) {
   const fullW = imageData.width;
   const fullH = imageData.height;
@@ -559,7 +525,6 @@ export function binarizeImageData(imageData, subRect = null) {
       const count = (x2 - x1 + 1) * (y2 - y1 + 1);
       const sum = integral[r2 + x2 + 1] - integral[r1 + x2 + 1] - integral[r2 + x1] + integral[r1 + x1];
       const localMean = sum / count;
-      // Blend local threshold with global midpoint to avoid false noise in pure white quiet zones
       const thresh = localMean * 0.85 + globalMid * 0.15 - 3;
       binary[dstOff + x] = gray[dstOff + x] < thresh ? 1 : 0;
     }
@@ -568,9 +533,6 @@ export function binarizeImageData(imageData, subRect = null) {
   return { width: w, height: h, x0, y0, binary, gray };
 }
 
-/**
- * Check if 5 run lengths match the 1:1:3:1:1 QR Finder Pattern ratio.
- */
 function isFinderRatio(counts) {
   const total = counts[0] + counts[1] + counts[2] + counts[3] + counts[4];
   if (total < 7) return false;
@@ -672,9 +634,6 @@ function crossCheckHorizontal(binary, width, startX, centerY, maxCount, totalMod
   return x - counts[4] - counts[3] - counts[2] / 2.0;
 }
 
-/**
- * Locate all Finder Pattern centers in a binary image.
- */
 export function findFinderPatterns(binary, width, height) {
   const centers = [];
   const skipRows = Math.max(1, Math.floor(height / 240));
@@ -757,10 +716,6 @@ export function findFinderPatterns(binary, width, height) {
   return centers.filter((c) => c.count >= 2).sort((a, b) => b.count - a.count);
 }
 
-/**
- * Order 3 finder patterns into { topLeft, topRight, bottomLeft } based on right-angle geometry
- * and 2D cross-product handedness.
- */
 function orderThreeFinderPatterns(p0, p1, p2) {
   const d01 = Math.hypot(p0.x - p1.x, p0.y - p1.y);
   const d12 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
@@ -781,7 +736,6 @@ function orderThreeFinderPatterns(p0, p1, p2) {
     pointB = p1;
   }
 
-  // Verify near-isosceles right triangle
   const legA = Math.hypot(pointA.x - topLeft.x, pointA.y - topLeft.y);
   const legB = Math.hypot(pointB.x - topLeft.x, pointB.y - topLeft.y);
   if (legA < 10 || legB < 10) return null;
@@ -794,7 +748,6 @@ function orderThreeFinderPatterns(p0, p1, p2) {
     (legA * legB);
   if (Math.abs(cosAngle) > 0.35) return null;
 
-  // Cross product (A - TL) x (B - TL) determines clockwise vs counter-clockwise
   const cross =
     (pointA.x - topLeft.x) * (pointB.y - topLeft.y) -
     (pointA.y - topLeft.y) * (pointB.x - topLeft.x);
@@ -805,10 +758,6 @@ function orderThreeFinderPatterns(p0, p1, p2) {
   return { topLeft, topRight, bottomLeft };
 }
 
-/**
- * Search for the bottom-right alignment pattern near the expected coordinates (for Version >= 2)
- * to refine perspective sampling under camera tilt.
- */
 function findAlignmentPattern(binary, width, height, estX, estY, moduleSize) {
   const radius = Math.max(6, Math.round(moduleSize * 4));
   const xMin = Math.max(2, Math.round(estX - radius));
@@ -820,19 +769,16 @@ function findAlignmentPattern(binary, width, height, estX, estY, moduleSize) {
   let bestY = estY;
   let bestScore = Infinity;
 
-  // Alignment pattern has a dark center (1x1), surrounded by a light ring (3x3), surrounded by a dark ring (5x5)
   const step = Math.max(1, Math.round(moduleSize));
   for (let y = yMin; y <= yMax; y += 1) {
     for (let x = xMin; x <= xMax; x += 1) {
-      if (!binary[y * width + x]) continue; // Center must be dark
-      // Check light ring at distance ~1*moduleSize in 4 directions
+      if (!binary[y * width + x]) continue;
       const lUp = y - step >= 0 ? binary[(y - step) * width + x] : 1;
       const lDn = y + step < height ? binary[(y + step) * width + x] : 1;
       const lLt = x - step >= 0 ? binary[y * width + (x - step)] : 1;
       const lRt = x + step < width ? binary[y * width + (x + step)] : 1;
       if (lUp || lDn || lLt || lRt) continue;
 
-      // Check dark ring at distance ~2*moduleSize
       const step2 = Math.max(2, Math.round(moduleSize * 2));
       const dUp = y - step2 >= 0 ? binary[(y - step2) * width + x] : 0;
       const dDn = y + step2 < height ? binary[(y + step2) * width + x] : 0;
@@ -852,11 +798,6 @@ function findAlignmentPattern(binary, width, height, estX, estY, moduleSize) {
   return { x: bestX, y: bestY, found: bestScore < Infinity };
 }
 
-/**
- * Compute 3x3 Projective Homography Matrix H mapping unit square (0,0),(1,0),(1,1),(0,1)
- * to arbitrary quadrilateral (x0,y0),(x1,y1),(x2,y2),(x3,y3), then compose with inverse
- * source-rect mapping so (u, v) module coordinates map directly to image pixels (x, y).
- */
 function squareToQuad(x0, y0, x1, y1, x2, y2, x3, y3) {
   const dx3 = x0 - x1 + x2 - x3;
   const dy3 = y0 - y1 + y2 - y3;
@@ -883,7 +824,6 @@ function squareToQuad(x0, y0, x1, y1, x2, y2, x3, y3) {
 
 function quadToSquare(x0, y0, x1, y1, x2, y2, x3, y3) {
   const m = squareToQuad(x0, y0, x1, y1, x2, y2, x3, y3);
-  // Adjoint of 3x3 matrix m
   return [
     m[4] * m[8] - m[5] * m[7], m[2] * m[7] - m[1] * m[8], m[1] * m[5] - m[2] * m[4],
     m[5] * m[6] - m[3] * m[8], m[0] * m[8] - m[2] * m[6], m[2] * m[3] - m[0] * m[5],
@@ -914,10 +854,6 @@ function buildPerspectiveTransform(
   return multiply3x3(sToQ, qToS);
 }
 
-/**
- * Sample a QR grid from a finder-pattern triplet using projective homography
- * and majority-vote 5-point sub-module super-sampling for blur/noise resilience.
- */
 function sampleAndDecodeFromTriplet(binary, width, height, triplet) {
   const { topLeft, topRight, bottomLeft } = triplet;
   const distTop = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y);
@@ -927,14 +863,12 @@ function sampleAndDecodeFromTriplet(binary, width, height, triplet) {
   const estDimension = Math.round(((distTop + distLeft) / (2.0 * avgModuleSize)) + 7.0);
   const estVersion = Math.max(1, Math.min(40, Math.round((estDimension - 17) / 4)));
 
-  // Try candidate versions around estVersion (estVersion, estVersion-1, estVersion+1, estVersion-2, estVersion+2)
   const candidateVersions = [estVersion];
   for (const delta of [-1, 1, -2, 2]) {
     const v = estVersion + delta;
     if (v >= 1 && v <= 40) candidateVersions.push(v);
   }
 
-  // Parallelogram estimate of 4th point (Either bottom-right alignment center or virtual finder corner)
   const paraX = topRight.x - topLeft.x + bottomLeft.x;
   const paraY = topRight.y - topLeft.y + bottomLeft.y;
 
@@ -948,7 +882,6 @@ function sampleAndDecodeFromTriplet(binary, width, height, triplet) {
     let dstBottomRightY = paraY;
 
     if (version >= 2) {
-      // Expected alignment pattern center is at (moduleCount - 6.5, moduleCount - 6.5)
       const scaleToAlign = 1.0 - 3.0 / (moduleCount - 7.0);
       const expAlignX = topLeft.x + scaleToAlign * (paraX - topLeft.x);
       const expAlignY = topLeft.y + scaleToAlign * (paraY - topLeft.y);
@@ -1002,7 +935,6 @@ function sampleAndDecodeFromTriplet(binary, width, height, triplet) {
 
     const decoded = decodeQrMatrixAnyOrientation(modules, moduleCount, true);
     if (decoded) {
-      // Compute outer bounding corners for UI overlay
       const mapPt = (u, v) => {
         const d = H[6] * u + H[7] * v + H[8];
         return {
@@ -1023,10 +955,6 @@ function sampleAndDecodeFromTriplet(binary, width, height, triplet) {
   return null;
 }
 
-/**
- * Fallback Direct Bounding-Box Sampler for axis-aligned or cropped QR images
- * where 1 of the 3 finder patterns was clipped or heavily blurred.
- */
 function fallbackBoundingBoxDecode(binary, width, height) {
   let minX = width;
   let maxX = -1;
@@ -1049,7 +977,6 @@ function fallbackBoundingBoxDecode(binary, width, height) {
   const boxH = maxY - minY + 1;
   if (boxW < 21 || boxH < 21) return null;
 
-  // Estimate module size from top-left finder outer width (7 modules)
   let run = 0;
   for (let d = 0; d < Math.min(boxW, boxH, 80); d++) {
     const y = minY + Math.min(2, d);
@@ -1101,9 +1028,6 @@ function fallbackBoundingBoxDecode(binary, width, height) {
   return null;
 }
 
-/**
- * Decode a single QR code inside an ImageData (or a sub-rectangle of an ImageData).
- */
 export function decodeSingleQrRegion(imageData, subRect = null) {
   const { width, height, x0, y0, binary } = binarizeImageData(imageData, subRect);
   const centers = findFinderPatterns(binary, width, height);
@@ -1135,9 +1059,38 @@ export function decodeSingleQrRegion(imageData, subRect = null) {
 }
 
 /**
- * Detect and decode up to 4 simultaneous QR codes from an ImageData frame.
- * Combines full-frame multi-finder clustering with quadrant/half sub-region scanning
- * so 1-QR, 2-QR, and 4-QR (2x2 grid) displays decode reliably.
+ * Helper to scan an arbitrary C columns x R rows grid of sub-rectangles with overlap.
+ */
+function scanGridRegions(imageData, cols, rows, addResult) {
+  const W = imageData.width;
+  const H = imageData.height;
+  const padX = Math.floor(W * 0.035);
+  const padY = Math.floor(H * 0.035);
+  const cellW = Math.floor(W / cols);
+  const cellH = Math.floor(H / rows);
+
+  let panelIdx = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = Math.max(0, c * cellW - (c > 0 ? padX : 0));
+      const y = Math.max(0, r * cellH - (r > 0 ? padY : 0));
+      const right = Math.min(W, (c + 1) * cellW + (c < cols - 1 ? padX : 0));
+      const bottom = Math.min(H, (r + 1) * cellH + (r < rows - 1 ? padY : 0));
+      const res = decodeSingleQrRegion(imageData, {
+        x,
+        y,
+        width: right - x,
+        height: bottom - y
+      });
+      if (res) addResult(res, panelIdx);
+      panelIdx++;
+    }
+  }
+}
+
+/**
+ * Detect and decode up to 6 simultaneous QR codes from an ImageData frame.
+ * Supports expectedCount = 1, 2, 4, 6, or 0 ('Auto').
  */
 export function detectMultiQrFromImageData(imageData, expectedCount = 4) {
   const results = [];
@@ -1154,58 +1107,42 @@ export function detectMultiQrFromImageData(imageData, expectedCount = 4) {
 
   const W = imageData.width;
   const H = imageData.height;
+  const isLandscape = W >= H;
 
-  // 1. If expectedCount === 4 (or auto), scan the 4 quadrants (with 6% overlap margin)
-  if (expectedCount === 4 || expectedCount === 0) {
-    const padX = Math.floor(W * 0.04);
-    const padY = Math.floor(H * 0.04);
-    const halfW = Math.floor(W / 2);
-    const halfH = Math.floor(H / 2);
-
-    const quadrants = [
-      { x: 0, y: 0, width: halfW + padX, height: halfH + padY, panel: 0 },
-      { x: Math.max(0, halfW - padX), y: 0, width: W - Math.max(0, halfW - padX), height: halfH + padY, panel: 1 },
-      { x: 0, y: Math.max(0, halfH - padY), width: halfW + padX, height: H - Math.max(0, halfH - padY), panel: 2 },
-      { x: Math.max(0, halfW - padX), y: Math.max(0, halfH - padY), width: W - Math.max(0, halfW - padX), height: H - Math.max(0, halfH - padY), panel: 3 }
-    ];
-
-    for (const q of quadrants) {
-      const res = decodeSingleQrRegion(imageData, q);
-      if (res) addResult(res, q.panel);
+  // 1. 6-QR Grid (3x2 landscape or 2x3 portrait)
+  if (expectedCount === 6 || expectedCount === 0) {
+    scanGridRegions(imageData, isLandscape ? 3 : 2, isLandscape ? 2 : 3, addResult);
+    if (results.length === 0) {
+      scanGridRegions(imageData, isLandscape ? 2 : 3, isLandscape ? 3 : 2, addResult);
     }
-    if (results.length > 0) return results;
+    if (results.length > 0 && expectedCount === 6) return results;
   }
 
-  // 2. If expectedCount === 2 (or 4-quadrant found nothing), try 2 side-by-side or stacked halves
+  // 2. 4-QR Grid (2x2 quadrants)
+  if (expectedCount === 4 || expectedCount === 0) {
+    scanGridRegions(imageData, 2, 2, addResult);
+    if (results.length > 0 && (expectedCount === 4 || results.length >= 3)) return results;
+  }
+
+  // 3. 2-QR Grid (2x1 side-by-side or 1x2 stacked)
   if (expectedCount === 2 || results.length === 0) {
-    const padX = Math.floor(W * 0.05);
-    const halfW = Math.floor(W / 2);
-    const halves = [
-      { x: 0, y: 0, width: halfW + padX, height: H, panel: 0 },
-      { x: Math.max(0, halfW - padX), y: 0, width: W - Math.max(0, halfW - padX), height: H, panel: 1 }
-    ];
-    for (const h of halves) {
-      const res = decodeSingleQrRegion(imageData, h);
-      if (res) addResult(res, h.panel);
+    scanGridRegions(imageData, isLandscape ? 2 : 1, isLandscape ? 1 : 2, addResult);
+    if (results.length === 0) {
+      scanGridRegions(imageData, isLandscape ? 1 : 2, isLandscape ? 2 : 1, addResult);
     }
     if (results.length > 0 && expectedCount === 2) return results;
   }
 
-  // 3. Full-frame single/multi-triplet scan
+  // 4. Single / Full-frame scan
   const fullRes = decodeSingleQrRegion(imageData, null);
   if (fullRes) addResult(fullRes, 0);
 
   return results;
 }
 
-/**
- * High-Level Hybrid QR Detector Controller
- * Automatically uses Native BarcodeDetector when available and falls back to / augments with
- * the built-in Pure-JS ISO/IEC 18004 Multi-QR Decoder.
- */
 export class HybridQrDetector {
   constructor(options = {}) {
-    this.enginePreference = options.engine || 'auto'; // 'auto' | 'native-plus-js' | 'pure-js'
+    this.enginePreference = options.engine || 'auto';
     this.nativeDetector = null;
     this._initNative();
   }
@@ -1222,14 +1159,11 @@ export class HybridQrDetector {
 
   getActiveEngineName() {
     if (this.enginePreference === 'pure-js' || !this.nativeDetector) {
-      return 'QuadBeam ISO/IEC-18004 JS Engine (Reed-Solomon + Homography)';
+      return 'QuadBeam ISO/IEC-18004 JS Engine (1/2/4/6-QR)';
     }
     return 'Hybrid (Native BarcodeDetector + QuadBeam ISO-18004 JS)';
   }
 
-  /**
-   * Detect 1, 2, or 4 QR codes from an ImageData (or Canvas/Video with ImageData extraction).
-   */
   async detectFromImageData(imageData, expectedCount = 4) {
     const t0 = performance.now();
     const results = [];
@@ -1257,7 +1191,8 @@ export class HybridQrDetector {
       }
     }
 
-    if (results.length < expectedCount) {
+    const targetPanels = expectedCount === 0 ? 6 : expectedCount;
+    if (results.length < targetPanels) {
       const jsResults = detectMultiQrFromImageData(imageData, expectedCount);
       for (const r of jsResults) {
         if (!seen.has(r.rawValue)) {

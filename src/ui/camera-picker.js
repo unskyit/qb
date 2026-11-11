@@ -1,6 +1,6 @@
 /**
- * QuadBeam Camera Picker & Hardware Control Bar Component
- * Exposes only hardware capabilities verified on the active MediaStreamTrack.
+ * QuadBeam Compact Camera Picker & Scanner Input Control Bar
+ * Includes Camera Device Selector, Flip/Prev/Next, Mirror, Torch, Zoom, Exposure.
  */
 
 import { escapeHtml } from '../utils/sanitization.js';
@@ -31,7 +31,7 @@ export function renderCameraControls(containerEl, {
               }>${escapeHtml(d.label || `Camera ${idx + 1}`)}</option>`
           )
           .join('')
-      : `<option value="">Default System Camera</option>`;
+      : `<option value="">Default Camera</option>`;
 
   const showTorch = Boolean(capabilities?.torch);
   const zoomCap = capabilities?.zoom;
@@ -41,7 +41,7 @@ export function renderCameraControls(containerEl, {
     <div class="qb-toolbar-group" style="width:100%;justify-content:space-between;">
       <div class="qb-toolbar-group">
         <label for="qb-camera-select" class="sr-only">Select Camera</label>
-        <select id="qb-camera-select" class="qb-select" aria-label="Select camera device">
+        <select id="qb-camera-select" class="qb-select" aria-label="Select camera device" style="max-width:145px;">
           ${deviceOptions}
         </select>
         <button type="button" id="qb-cam-prev-btn" class="qb-btn qb-btn-secondary" title="Previous Camera" aria-label="Previous Camera">Prev</button>
@@ -52,24 +52,24 @@ export function renderCameraControls(containerEl, {
           showTorch
             ? `<button type="button" id="qb-cam-torch-btn" class="qb-btn ${
                 capabilities.torchActive ? 'qb-btn-primary' : 'qb-btn-secondary'
-              }">Torch ${capabilities.torchActive ? 'On' : 'Off'}</button>`
+              }">Torch</button>`
             : ''
         }
       </div>
       <div class="qb-toolbar-group">
         ${
           zoomCap
-            ? `<label style="font-size:0.78rem;display:flex;align-items:center;gap:0.35rem;">
-                <span>Zoom</span>
-                <input type="range" id="qb-cam-zoom-range" min="${zoomCap.min}" max="${zoomCap.max}" step="${zoomCap.step}" value="${zoomCap.current}" style="width:84px;"/>
+            ? `<label style="font-size:0.7rem;display:flex;align-items:center;gap:0.25rem;">
+                <span>Zm</span>
+                <input type="range" id="qb-cam-zoom-range" min="${zoomCap.min}" max="${zoomCap.max}" step="${zoomCap.step}" value="${zoomCap.current}" style="width:60px;"/>
               </label>`
             : ''
         }
         ${
           evCap
-            ? `<label style="font-size:0.78rem;display:flex;align-items:center;gap:0.35rem;">
+            ? `<label style="font-size:0.7rem;display:flex;align-items:center;gap:0.25rem;">
                 <span>EV</span>
-                <input type="range" id="qb-cam-ev-range" min="${evCap.min}" max="${evCap.max}" step="${evCap.step}" value="${evCap.current}" style="width:84px;"/>
+                <input type="range" id="qb-cam-ev-range" min="${evCap.min}" max="${evCap.max}" step="${evCap.step}" value="${evCap.current}" style="width:60px;"/>
               </label>`
             : ''
         }

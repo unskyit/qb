@@ -1,7 +1,7 @@
 /**
  * QuadBeam Receiver Scanner Controller
  * Coordinates CameraManager, VideoFrameCapture, HybridQrDetector, PacketCollector,
- * FileReconstructor, and live Detection Guide Overlay rendering.
+ * FileReconstructor, and live Detection Guide Overlay rendering for 1, 2, 4, or 6 QR codes.
  */
 
 import { CameraManager } from './camera-manager.js';
@@ -69,9 +69,6 @@ export class ScannerController {
     return camInfo;
   }
 
-  /**
-   * Switch camera while keeping all received packets and reconstructed blocks intact!
-   */
   async switchCameraPreservingState(deviceId = null, direction = 'next') {
     const wasScanning = this.isScanning;
     this.frameCapture.stop();
@@ -133,19 +130,20 @@ export class ScannerController {
     this._clearOverlay();
   }
 
-  /**
-   * Directly ingest a batch of raw packets or rendered QR canvases (e.g., from In-App Optical Loopback
-   * or uploaded QR image frames) through the exact same QR detector and packet collector pipeline.
-   */
-  async processExternalImageData(imageData, nowMs = performance.now()) {
-    return this._processCapturedFrame(imageData, nowMs);
+  async processExternalImageData(imageData, nowMs = performance.now(), explicitQrCount = null) {
+    return this._processCapturedFrame(imageData, nowMs, explicitQrCount);
   }
 
-  async _processCapturedFrame(imageData, nowMs) {
+  async _processCapturedFrame(imageData, nowMs, explicitQrCount = null) {
     this.totalFramesScanned += 1;
+    const expectedQrCount =
+      explicitQrCount !== null
+        ? explicitQrCount
+        : (appState.preferences.receiverQrCount ?? appState.preferences.qrCount ?? 4);
+
     const { results, latencyMs } = await this.qrDetector.detectFromImageData(
       imageData,
-      appState.preferences.qrCount
+      expectedQrCount
     );
 
     if (results.length > 0) {
@@ -206,7 +204,7 @@ export class ScannerController {
 
       ctx.save();
       ctx.strokeStyle = '#34D399';
-      ctx.fillStyle = 'rgba(52, 211, 153, 0.14)';
+      ctx.fillStyle = 'rgba(52, 211, 153, 0.16)';
       ctx.lineWidth = Math.max(2, Math.round(frameW / 240));
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);
@@ -235,6 +233,7 @@ export class ScannerController {
     return {
       ...snap,
       panelsDetectedInFrame,
+      expectedReceiverQrCount: appState.preferences.receiverQrCount ?? 4,
       captureFps: Number(this.frameCapture.getMeasuredCaptureFps().toFixed(1)),
       decodeFps: Number(this.decodeFpsCounter.getFps(nowMs).toFixed(1)),
       validPacketsPerSec: Number(this.packetCollector.validPacketRateCounter.getFps(nowMs).toFixed(1)),

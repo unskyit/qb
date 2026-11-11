@@ -1,13 +1,14 @@
 /**
  * QuadBeam Root Application Controller
  * Integrates Home, Send Files, Receive Files, Settings, PWA installation,
- * Theme management, Mobile lifecycle handling, and End-to-End Optical Loopback Verification.
+ * Theme management, Mobile lifecycle handling, and End-to-End 1/2/4/6-QR Optical Loopback Verification.
  */
 
 import { detectCapabilities } from './core/capability-detector.js';
 import { appState } from './core/state.js';
 import { appEvents } from './core/events.js';
 import { SenderController } from './sender/sender-controller.js';
+import { getGridDimensionsForCount } from './sender/transmission-settings.js';
 import { ScannerController } from './receiver/scanner-controller.js';
 import { renderHomeView } from './ui/home.js';
 import { renderSendView } from './ui/send-view.js';
@@ -54,7 +55,7 @@ export class QuadBeamApp {
 
     root.setAttribute('data-theme', effectiveTheme);
     root.setAttribute('data-accent', prefs.accent || 'calm-blue');
-    root.setAttribute('data-density', prefs.density || 'comfortable');
+    root.setAttribute('data-density', prefs.density || 'compact');
     root.setAttribute('data-reduced-motion', String(Boolean(prefs.reducedMotion)));
 
     const metaTheme = document.querySelector('meta[name="theme-color"]');
@@ -64,7 +65,7 @@ export class QuadBeamApp {
 
     const sendPwdWrap = document.getElementById('qb-send-password-wrap');
     if (sendPwdWrap) {
-      sendPwdWrap.style.display = prefs.enablePasswordEncryption ? 'flex' : 'none';
+      sendPwdWrap.style.display = prefs.enablePasswordEncryption ? 'inline-flex' : 'none';
     }
   }
 
@@ -86,12 +87,19 @@ export class QuadBeamApp {
       btn.setAttribute('aria-selected', String(target === viewName));
     });
 
-    if (viewName === 'send' && this.senderController.activeConfig) {
-      this.senderController.reconfigureLiveLayout(
-        window.innerWidth,
-        window.innerHeight,
-        false
-      );
+    if (viewName === 'send' && this.sendViewApi) {
+      setTimeout(() => {
+        const dims = this.sendViewApi.getStageDims();
+        this.senderController.reconfigureLiveLayout(
+          dims.viewportWidth,
+          dims.viewportHeight,
+          dims.isFullscreen,
+          dims.stageWidth,
+          dims.stageHeight
+        );
+      }, 20);
+    } else if (viewName === 'receive' && this.receiveViewApi) {
+      this.receiveViewApi.updateReticleGrid(appState.preferences.receiverQrCount ?? 4);
     }
   }
 
@@ -138,7 +146,7 @@ export class QuadBeamApp {
         const next = cur === 'dark' ? 'light' : 'dark';
         appState.updatePreferences({ theme: next });
         this.applyThemeAndPreferences();
-        showToast(`Switched to ${next === 'dark' ? 'Dark AMOLED' : 'Light'} theme.`, 'info', 2000);
+        showToast(`Theme: ${next === 'dark' ? 'Dark AMOLED' : 'Light'}`, 'info', 1600);
       });
     }
 
@@ -221,7 +229,7 @@ export class QuadBeamApp {
         mode: 'idle',
         transferState: 'idle'
       });
-      showToast(`Verified "${stats.filename}" (SHA-256 matched)!`, 'success', 5000);
+      showToast(`Verified "${stats.filename}" (SHA-256 matched)!`, 'success', 4500);
     });
 
     appEvents.on('receiver:calibration-update', (summary) => {
@@ -231,19 +239,24 @@ export class QuadBeamApp {
     });
 
     window.addEventListener('resize', () => {
-      if (appState.runtime.activeView === 'send' && this.senderController.activeConfig) {
+      if (appState.runtime.activeView === 'send' && this.sendViewApi) {
+        const dims = this.sendViewApi.getStageDims();
         this.senderController.reconfigureLiveLayout(
-          window.innerWidth,
-          window.innerHeight,
-          Boolean(document.fullscreenElement)
+          dims.viewportWidth,
+          dims.viewportHeight,
+          dims.isFullscreen,
+          dims.stageWidth,
+          dims.stageHeight
         );
+      } else if (appState.runtime.activeView === 'receive' && this.receiveViewApi) {
+        this.receiveViewApi.updateReticleGrid(appState.preferences.receiverQrCount ?? 4);
       }
     });
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.scannerController.isScanning) {
         this.scannerController.pauseScanning();
-        showToast('Paused camera scanning while tab was in background. Received blocks preserved.', 'info');
+        showToast('Paused scanning in background. Received blocks preserved.', 'info', 2500);
       }
     });
   }
@@ -251,7 +264,7 @@ export class QuadBeamApp {
   _openRepairInputModal() {
     modalManager.open('Apply Receiver Repair Request Code', (bodyEl) => {
       bodyEl.innerHTML = `
-        <p style="font-size:0.86rem;color:var(--qb-text-secondary);">
+        <p style="font-size:0.82rem;color:var(--qb-text-secondary);">
           Paste the Base45 Repair Request code generated on the Receiver screen to prioritize transmitting only the missing blocks:
         </p>
         <input type="text" id="qb-modal-repair-input" class="qb-input qb-mono" placeholder="Paste Repair QR string..." style="width:100%;" />
@@ -274,12 +287,7 @@ export class QuadBeamApp {
   }
 
   /**
-   * Run a true end-to-end Optical Loopback Verification on the active file in the Sender queue:
-   * 1. Starts the Sender 4-QR optical stream
-   * 2. Composites the 4 rendered QR canvases onto a synthetic camera frame buffer
-   * 3. Runs the Receiver's Computer Vision QR Detector (`detectMultiQrFromImageData`) over the pixels
-   * 4. Simulates 10% random packet drops to prove LT Fountain parity recovery in action
-   * 5. Reconstructs the file and verifies its full-file SHA-256 digest!
+   * Run end-to-end Optical Loopback Verification across 1, 2, 4, or 6 QR panels.
    */
   async runOpticalLoopbackVerification() {
     const activeItem = this.senderController.getActiveItem();
@@ -290,15 +298,19 @@ export class QuadBeamApp {
 
     try {
       this.scannerController.resetSession();
-      await this.senderController.startTransmission({
+      const dims = this.sendViewApi ? this.sendViewApi.getStageDims() : {
         viewportWidth: window.innerWidth || 1024,
         viewportHeight: window.innerHeight || 768,
+        stageWidth: 0,
+        stageHeight: 0,
         isFullscreen: false
-      });
-      // Pause automatic timer so we drive deterministic loopback frames
+      };
+
+      await this.senderController.startTransmission(dims);
       this.senderController.frameScheduler.pause();
 
-      showToast('Running live 4-QR optical loopback with 10% simulated frame loss...', 'info', 3000);
+      const qrCount = this.senderController.activeConfig.qrCount;
+      showToast(`Loopback verifying ${qrCount}-QR stream (10% simulated frame drop)...`, 'info', 2500);
 
       const compositeCanvas = document.createElement('canvas');
       const ctx = compositeCanvas.getContext('2d', { willReadFrequently: true });
@@ -316,41 +328,33 @@ export class QuadBeamApp {
         if (!qrCanvases || qrCanvases.length === 0) break;
 
         const pSize = qrCanvases[0].width;
-        const gap = 16;
-        if (qrCanvases.length === 4) {
-          compositeCanvas.width = pSize * 2 + gap * 3;
-          compositeCanvas.height = pSize * 2 + gap * 3;
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-          ctx.drawImage(qrCanvases[0], gap, gap);
-          ctx.drawImage(qrCanvases[1], pSize + gap * 2, gap);
-          ctx.drawImage(qrCanvases[2], gap, pSize + gap * 2);
-          ctx.drawImage(qrCanvases[3], pSize + gap * 2, pSize + gap * 2);
-        } else if (qrCanvases.length === 2) {
-          compositeCanvas.width = pSize * 2 + gap * 3;
-          compositeCanvas.height = pSize + gap * 2;
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-          ctx.drawImage(qrCanvases[0], gap, gap);
-          ctx.drawImage(qrCanvases[1], pSize + gap * 2, gap);
-        } else {
-          compositeCanvas.width = pSize + gap * 2;
-          compositeCanvas.height = pSize + gap * 2;
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-          ctx.drawImage(qrCanvases[0], gap, gap);
+        const gap = 12;
+        const { cols, rows } = getGridDimensionsForCount(qrCanvases.length, true);
+
+        compositeCanvas.width = cols * pSize + (cols + 1) * gap;
+        compositeCanvas.height = rows * pSize + (rows + 1) * gap;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+
+        for (let i = 0; i < qrCanvases.length; i++) {
+          const c = i % cols;
+          const r = Math.floor(i / cols);
+          ctx.drawImage(qrCanvases[i], gap + c * (pSize + gap), gap + r * (pSize + gap));
         }
 
-        // Simulate 10% camera frame drop on non-first frames to prove fountain code recovery
         if (safetyFrames > 1 && safetyFrames % 10 === 0) {
-          continue;
+          continue; // Simulate 10% camera frame drop
         }
 
         const imgData = ctx.getImageData(0, 0, compositeCanvas.width, compositeCanvas.height);
-        await this.scannerController.processExternalImageData(imgData, performance.now());
+        await this.scannerController.processExternalImageData(
+          imgData,
+          performance.now(),
+          qrCanvases.length
+        );
 
         if (safetyFrames % 4 === 0) {
-          await new Promise((r) => setTimeout(r, 10));
+          await new Promise((r) => setTimeout(r, 8));
         }
       }
 

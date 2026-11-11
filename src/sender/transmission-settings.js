@@ -1,108 +1,110 @@
 /**
- * QuadBeam Adaptive Transmission Configuration & Calibration Planner
- * Computes safe QR panel counts, module pixel sizes, and payload densities
- * based on actual viewport dimensions and measured receiver capabilities.
+ * QuadBeam Adaptive Transmission Configuration & Strict Square Grid Planner
+ * Supports 1, 2, 4, and 6 QR codes with strict 1:1 square panel sizing that fits
+ * inside a single non-scrolling viewport even on small (< 250 DPI) mobile screens.
  */
 
 import { TRANSMISSION_PROFILES, DENSITY_BLOCK_SIZES, PACKET_TYPE } from '../protocol/constants.js';
 import { serializePacket } from '../protocol/packet-format.js';
 
 /**
- * Determine optimal QR count (1, 2, or 4), safe canvas pixel size, and block size
- * so that every rendered QR module is at least `minModulePx` CSS pixels wide.
+ * Compute grid columns and rows for 1, 2, 4, or 6 QR codes given available width/height.
+ */
+export function getGridDimensionsForCount(qrCount, isLandscape = true) {
+  if (qrCount === 1) return { cols: 1, rows: 1 };
+  if (qrCount === 2) return isLandscape ? { cols: 2, rows: 1 } : { cols: 1, rows: 2 };
+  if (qrCount === 6) return isLandscape ? { cols: 3, rows: 2 } : { cols: 2, rows: 3 };
+  return { cols: 2, rows: 2 }; // Default 4 QR (2x2)
+}
+
+/**
+ * Compute safe QR layout parameters.
+ * - When `autoMode === true` (used for automatic viewport step-down), steps down panel count
+ *   on tiny screens if requestedBlockSize is high.
+ * - When `autoMode === false` (default user-selected mode), keeps the exact requested QR count
+ *   (1, 2, 4, or 6) and computes the exact 1:1 square pixel size that fits inside the stage
+ *   with zero page scrolling and low-DPI friendly module density.
  */
 export function computeSafeQrLayout({
-  viewportWidth,
-  viewportHeight,
+  viewportWidth = 1024,
+  viewportHeight = 768,
+  stageWidth = 0,
+  stageHeight = 0,
   requestedQrCount = 4,
-  requestedBlockSize = 220,
+  requestedBlockSize = 160,
   ecLevel = 'M',
-  isFullscreen = false
+  isFullscreen = false,
+  strictHonorCount = false
 }) {
-  const chromeHeight = isFullscreen ? 88 : 180;
-  const chromeWidth = isFullscreen ? 24 : 48;
-  const availW = Math.max(220, viewportWidth - chromeWidth);
-  const availH = Math.max(220, viewportHeight - chromeHeight);
+  // Reserve compact space for header + top toolbar + bottom telemetry so the entire app fits in 100dvh with no scroll
+  const reservedVertical = isFullscreen ? 76 : 165;
+  const reservedHorizontal = isFullscreen ? 20 : 28;
 
-  // Estimate QR module count for requestedBlockSize in Base45 Alphanumeric Mode:
-  // ~1.5 chars per byte -> version ~ 10..15 -> moduleCount ~ 57..77 (+ 8 quiet zone = 65..85)
-  const estModules = requestedBlockSize <= 150 ? 61 : requestedBlockSize <= 240 ? 73 : 89;
-  const minSafeModulePx = 3; // At least 3 CSS pixels per module for reliable camera capture
-  const minPanelSizePx = estModules * minSafeModulePx;
+  const availW = stageWidth > 80 ? stageWidth - 16 : Math.max(200, viewportWidth - reservedHorizontal);
+  const availH = stageHeight > 80 ? stageHeight - 16 : Math.max(180, viewportHeight - reservedVertical);
+  const isLandscape = availW >= availH * 1.05;
 
-  let effectiveQrCount = requestedQrCount;
+  let effectiveQrCount = [1, 2, 4, 6].includes(Number(requestedQrCount)) ? Number(requestedQrCount) : 4;
   let effectiveBlockSize = requestedBlockSize;
-  let panelSizePx = 280;
-  let gridColumns = 2;
-  let gridRows = 2;
   let autoReducedReason = null;
 
-  if (effectiveQrCount === 4) {
-    const gap = 14;
-    const maxQuadPanel = Math.floor(Math.min((availW - gap) / 2, (availH - gap) / 2));
-    if (maxQuadPanel >= minPanelSizePx) {
-      panelSizePx = Math.min(440, maxQuadPanel);
-      gridColumns = 2;
-      gridRows = 2;
-    } else if (maxQuadPanel >= 57 * minSafeModulePx) {
-      // Keep 4 panels but reduce density to 140B so modules stay large enough
-      panelSizePx = maxQuadPanel;
-      effectiveBlockSize = Math.min(effectiveBlockSize, 140);
-      autoReducedReason = 'Reduced QR payload density so all 4 panels remain clearly scannable on this screen.';
-    } else {
-      // Automatically step down to 2 or 1 panels
+  if (!strictHonorCount) {
+    const minDim = Math.min(availW, availH);
+    if (minDim < 260 && effectiveQrCount > 2) {
       effectiveQrCount = 2;
-      autoReducedReason = 'Switched from 4 QR panels to fewer panels to preserve scannable module size on a compact viewport.';
+      autoReducedReason = 'Adjusted to 2 QR panels for compact viewport.';
     }
   }
 
-  if (effectiveQrCount === 2) {
-    const gap = 16;
-    const isLandscape = availW >= availH;
-    const maxDualPanel = isLandscape
-      ? Math.floor(Math.min((availW - gap) / 2, availH))
-      : Math.floor(Math.min(availW, (availH - gap) / 2));
+  // On small / low-DPI screens, keep block size compact (100B - 140B) so each QR has fewer, larger square modules
+  const { cols, rows } = getGridDimensionsForCount(effectiveQrCount, isLandscape);
+  const gap = Math.min(availW, availH) < 420 ? 6 : 10;
+  const padPerPanel = Math.min(availW, availH) < 420 ? 8 : 12;
 
-    if (maxDualPanel >= 57 * minSafeModulePx) {
-      panelSizePx = Math.min(480, maxDualPanel);
-      gridColumns = isLandscape ? 2 : 1;
-      gridRows = isLandscape ? 1 : 2;
-    } else {
-      effectiveQrCount = 1;
-      autoReducedReason = 'Switched to 1 fullscreen QR panel for maximum scan reliability on a narrow screen.';
-    }
+  const maxSquareW = Math.floor((availW - gap * (cols - 1)) / cols) - padPerPanel;
+  const maxSquareH = Math.floor((availH - gap * (rows - 1)) / rows) - padPerPanel;
+  const panelSizePx = Math.max(68, Math.min(340, Math.min(maxSquareW, maxSquareH)));
+
+  if (panelSizePx < 125) {
+    effectiveBlockSize = Math.min(effectiveBlockSize, 100);
+  } else if (panelSizePx < 165) {
+    effectiveBlockSize = Math.min(effectiveBlockSize, 140);
   }
 
-  if (effectiveQrCount === 1) {
-    panelSizePx = Math.min(560, Math.floor(Math.min(availW, availH)));
-    gridColumns = 1;
-    gridRows = 1;
-  }
-
-  const landscapeRecommended = viewportWidth < viewportHeight && requestedQrCount >= 2;
+  const landscapeRecommended = viewportWidth < viewportHeight && effectiveQrCount >= 2;
 
   return {
     qrCount: effectiveQrCount,
     blockSize: effectiveBlockSize,
     ecLevel,
-    panelSizePx: Math.max(180, panelSizePx),
-    gridColumns,
-    gridRows,
+    panelSizePx,
+    gridColumns: cols,
+    gridRows: rows,
+    gapPx: gap,
     autoReducedReason,
     landscapeRecommended
   };
 }
 
-export function resolveTransmissionSettings(preferences, viewportWidth = 1024, viewportHeight = 768, isFullscreen = false) {
+export function resolveTransmissionSettings(
+  preferences,
+  viewportWidth = 1024,
+  viewportHeight = 768,
+  isFullscreen = false,
+  stageWidth = 0,
+  stageHeight = 0
+) {
   const profilePreset = TRANSMISSION_PROFILES[preferences.profile] || TRANSMISSION_PROFILES.balanced;
 
   const requestedQrCount =
-    preferences.profile === 'custom' ? preferences.qrCount : profilePreset.qrCount;
+    preferences.profile === 'custom' || preferences.qrCount
+      ? Number(preferences.qrCount || profilePreset.qrCount)
+      : profilePreset.qrCount;
   const requestedFps =
     preferences.profile === 'custom' ? preferences.fps : profilePreset.fps;
   const requestedBlockSize =
     preferences.profile === 'custom'
-      ? (DENSITY_BLOCK_SIZES[preferences.qrDensity] || 220)
+      ? (DENSITY_BLOCK_SIZES[preferences.qrDensity] || 160)
       : profilePreset.blockSize;
   const ecLevel =
     preferences.profile === 'custom' ? preferences.ecLevel : profilePreset.ecLevel;
@@ -111,39 +113,16 @@ export function resolveTransmissionSettings(preferences, viewportWidth = 1024, v
       ? preferences.redundancyPercent
       : profilePreset.redundancyPercent;
 
-  if (!preferences.autoMode) {
-    const gap = 14;
-    const availW = Math.max(220, viewportWidth - (isFullscreen ? 24 : 48));
-    const availH = Math.max(220, viewportHeight - (isFullscreen ? 88 : 180));
-    let panelSizePx = Math.min(availW, availH);
-    if (requestedQrCount === 4) {
-      panelSizePx = Math.floor(Math.min((availW - gap) / 2, (availH - gap) / 2));
-    } else if (requestedQrCount === 2) {
-      panelSizePx = availW >= availH
-        ? Math.floor(Math.min((availW - gap) / 2, availH))
-        : Math.floor(Math.min(availW, (availH - gap) / 2));
-    }
-    return {
-      qrCount: requestedQrCount,
-      fps: requestedFps,
-      blockSize: requestedBlockSize,
-      ecLevel,
-      redundancyPercent,
-      panelSizePx: Math.max(150, Math.min(540, panelSizePx)),
-      gridColumns: requestedQrCount === 1 ? 1 : requestedQrCount === 2 && availW < availH ? 1 : 2,
-      gridRows: requestedQrCount === 4 ? 2 : requestedQrCount === 2 && availW < availH ? 2 : 1,
-      autoReducedReason: null,
-      landscapeRecommended: viewportWidth < viewportHeight && requestedQrCount >= 2
-    };
-  }
-
   const layout = computeSafeQrLayout({
     viewportWidth,
     viewportHeight,
+    stageWidth,
+    stageHeight,
     requestedQrCount,
     requestedBlockSize,
     ecLevel,
-    isFullscreen
+    isFullscreen,
+    strictHonorCount: !preferences.autoMode
   });
 
   return {
@@ -153,14 +132,11 @@ export function resolveTransmissionSettings(preferences, viewportWidth = 1024, v
   };
 }
 
-/**
- * Generate a Calibration Probe Packet for link testing before large transfers.
- */
 export function buildCalibrationProbePacket({
   sessionId,
   sequenceId,
   panelId = 0,
-  probeBlockSize = 220,
+  probeBlockSize = 140,
   targetFps = 15,
   qrCount = 4
 }) {
@@ -170,7 +146,6 @@ export function buildCalibrationProbePacket({
   dv.setUint8(2, targetFps);
   dv.setUint8(3, qrCount);
   dv.setUint32(4, sequenceId >>> 0, false);
-  // Deterministic test pattern across remaining bytes
   for (let i = 8; i < payload.length; i++) {
     payload[i] = ((i * 37) ^ sequenceId ^ (panelId * 19)) & 0xff;
   }
@@ -179,7 +154,7 @@ export function buildCalibrationProbePacket({
     packetType: PACKET_TYPE.CALIBRATION,
     panelId,
     sessionId,
-    fileId: 0x43414c42, // 'CALB'
+    fileId: 0x43414c42,
     generationId: 0,
     sequenceId,
     blockIndexOrSeed: (targetFps << 16) | (qrCount << 8) | (probeBlockSize & 0xff),
