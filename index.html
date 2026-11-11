@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-accent="calm-blue" data-density="comfortable">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#F7F9FC" />
+  <meta name="description" content="QuadBeam — Transfer files through light. Synchronized 4-QR optical file transfer with LT Fountain erasure coding and SHA-256 verification." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>QuadBeam — Transfer files through light</title>
+
+  <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg" />
+  <link rel="icon" type="image/png" href="./icons/favicon.png" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+
+  <link rel="stylesheet" href="./src/styles/tokens.css" />
+  <link rel="stylesheet" href="./src/styles/global.css" />
+  <link rel="stylesheet" href="./src/styles/layout.css" />
+  <link rel="stylesheet" href="./src/styles/components.css" />
+  <link rel="stylesheet" href="./src/styles/animations.css" />
+  <link rel="stylesheet" href="./src/styles/responsive.css" />
+</head>
+<body>
+  <div class="qb-app-shell">
+    <!-- Top Application Header -->
+    <header class="qb-header">
+      <a href="#qb-view-home" id="qb-brand-home" class="qb-brand" aria-label="QuadBeam Home">
+        <img src="./icons/favicon.svg" alt="" class="qb-brand-logo" width="36" height="36" />
+        <div class="qb-brand-text">
+          <span class="qb-brand-name">QuadBeam</span>
+          <span class="qb-brand-tagline">Transfer files through light</span>
+        </div>
+      </a>
+
+      <!-- Segmented Mode Navigation Tabs -->
+      <nav class="qb-mode-tabs" role="tablist" aria-label="Transfer Mode">
+        <button type="button" class="qb-mode-tab active" data-view="home" role="tab" aria-selected="true">
+          Overview
+        </button>
+        <button type="button" class="qb-mode-tab" data-view="send" role="tab" aria-selected="false">
+          Send Files
+        </button>
+        <button type="button" class="qb-mode-tab" data-view="receive" role="tab" aria-selected="false">
+          Receive Files
+        </button>
+      </nav>
+
+      <!-- Right Header Controls -->
+      <div class="qb-header-actions">
+        <button type="button" id="qb-header-install-btn" class="qb-btn qb-btn-primary" style="display:none;padding:0.4rem 0.8rem;min-height:36px;font-size:0.8rem;">
+          Install App
+        </button>
+        <button type="button" id="qb-header-theme-btn" class="qb-btn-icon" title="Switch Light / Dark AMOLED Theme" aria-label="Toggle theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+        <button type="button" id="qb-header-help-btn" class="qb-btn-icon" title="Quick Start & Alignment Help" aria-label="Help">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </button>
+        <button type="button" id="qb-header-settings-btn" class="qb-btn-icon" title="Settings & Diagnostics" aria-label="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main View Containers -->
+    <main class="qb-main">
+      <div id="qb-view-home" class="qb-view active" role="tabpanel"></div>
+      <div id="qb-view-send" class="qb-view" role="tabpanel"></div>
+      <div id="qb-view-receive" class="qb-view" role="tabpanel"></div>
+    </main>
+
+    <!-- Compact OS-Style Bottom Progress Bar -->
+    <aside id="qb-bottom-progress" class="qb-bottom-progress" style="display:none;" aria-label="Transfer Progress"></aside>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

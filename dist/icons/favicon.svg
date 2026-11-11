@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="qb-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E3A8A"/>
+    </linearGradient>
+    <linearGradient id="qb-beam" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#77AAEF"/>
+      <stop offset="100%" stop-color="#477FDF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#qb-bg)"/>
+  <!-- Top-left finder quad -->
+  <rect x="96" y="96" width="132" height="132" rx="22" fill="none" stroke="#77AAEF" stroke-width="20"/>
+  <rect x="134" y="134" width="56" height="56" rx="10" fill="#FFFFFF"/>
+  <!-- Top-right finder quad -->
+  <rect x="284" y="96" width="132" height="132" rx="22" fill="none" stroke="#77AAEF" stroke-width="20"/>
+  <rect x="322" y="134" width="56" height="56" rx="10" fill="#77AAEF"/>
+  <!-- Bottom-left finder quad -->
+  <rect x="96" y="284" width="132" height="132" rx="22" fill="none" stroke="#77AAEF" stroke-width="20"/>
+  <rect x="134" y="322" width="56" height="56" rx="10" fill="#77AAEF"/>
+  <!-- Bottom-right optical beam matrix -->
+  <rect x="284" y="284" width="132" height="132" rx="22" fill="url(#qb-beam)"/>
+  <path d="M318 350 L344 376 L386 324" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Center synchronization cross -->
+  <circle cx="256" cy="256" r="14" fill="#FFFFFF"/>
+</svg>

@@ -1,0 +1,188 @@
+/**
+ * QuadBeam Application Shell & View Layout Styles
+ */
+
+.qb-app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.qb-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background-color: var(--qb-surface-primary);
+  border-bottom: 1px solid var(--qb-border);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  box-shadow: var(--qb-shadow-sm);
+}
+
+.qb-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: var(--qb-text-primary);
+  cursor: pointer;
+}
+
+.qb-brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.qb-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.qb-brand-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.qb-brand-tagline {
+  font-size: 0.75rem;
+  color: var(--qb-text-secondary);
+  font-weight: 500;
+}
+
+/* Primary Mode Segmented Tab Switcher in Header */
+.qb-mode-tabs {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--qb-surface-secondary);
+  border: 1px solid var(--qb-border);
+  border-radius: var(--qb-radius-md);
+  padding: 0.22rem;
+  gap: 0.2rem;
+}
+
+.qb-mode-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: var(--qb-radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--qb-text-secondary);
+  transition: all var(--qb-transition-fast);
+  min-height: 36px;
+}
+
+.qb-mode-tab:hover {
+  color: var(--qb-text-primary);
+}
+
+.qb-mode-tab.active {
+  background-color: var(--qb-surface-primary);
+  color: var(--qb-accent);
+  box-shadow: var(--qb-shadow-sm);
+}
+
+.qb-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qb-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 1.75rem 1.5rem 6.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.qb-view {
+  display: none;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.qb-view.active {
+  display: flex;
+}
+
+/* Hero Section */
+.qb-hero {
+  text-align: center;
+  max-width: 680px;
+  margin: 0.75rem auto 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.qb-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background-color: var(--qb-accent-subtle);
+  color: var(--qb-accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--qb-border);
+}
+
+.qb-hero-title {
+  font-size: clamp(1.85rem, 4vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--qb-text-primary);
+}
+
+.qb-hero-subtitle {
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  color: var(--qb-text-secondary);
+  max-width: 540px;
+}
+
+/* Action Cards Grid */
+.qb-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  max-width: 920px;
+  width: 100%;
+  margin: 0.5rem auto;
+}
+
+/* Benefit Indicators Row */
+.qb-benefits-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  max-width: 920px;
+  width: 100%;
+  margin: 0.25rem auto 0;
+}
+
+/* Two-Column Workspace for Send & Receive */
+.qb-workspace-grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}

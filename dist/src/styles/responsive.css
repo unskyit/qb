@@ -1,0 +1,63 @@
+/**
+ * QuadBeam Responsive Mobile & Small-Viewport Design
+ */
+
+@media (max-width: 960px) {
+  .qb-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .qb-header {
+    padding: 0.65rem 1rem;
+    flex-wrap: wrap;
+  }
+
+  .qb-brand-tagline {
+    display: none;
+  }
+
+  .qb-mode-tabs {
+    order: 3;
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  .qb-mode-tab {
+    flex: 1;
+    justify-content: center;
+    padding: 0.45rem 0.5rem;
+    font-size: 0.82rem;
+  }
+
+  .qb-main {
+    padding: 1.1rem 0.9rem 7rem;
+  }
+
+  .qb-action-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .qb-benefits-row {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .qb-qr-grid {
+    gap: 10px;
+    padding: 6px;
+  }
+
+  .qb-qr-panel {
+    padding: 8px;
+  }
+
+  .qb-bottom-progress {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+}

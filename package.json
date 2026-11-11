@@ -1,0 +1,40 @@
+{
+  "name": "quadbeam",
+  "version": "1.0.0",
+  "description": "QuadBeam — Transfer files through light. High-reliability 4-QR optical file transfer PWA.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "node scripts/dev-server.js",
+    "build": "node scripts/build-dist.js && node scripts/verify-build.js",
+    "preview": "node scripts/dev-server.js --dist",
+    "test": "node --test tests/unit/*.test.js tests/integration/*.test.js tests/simulation/*.test.js tests/e2e/*.test.js",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:integration": "node --test tests/integration/*.test.js",
+    "test:simulation": "node --test tests/simulation/*.test.js",
+    "test:e2e": "node --test tests/e2e/*.test.js",
+    "benchmark": "node scripts/benchmark.js",
+    "generate-icons": "node scripts/generate-icons.js",
+    "verify": "node scripts/verify-build.js"
+  },
+  "keywords": [
+    "optical-transfer",
+    "qr-code",
+    "fountain-code",
+    "lt-codes",
+    "file-transfer",
+    "pwa",
+    "offline-first",
+    "quadbeam"
+  ],
+  "author": "QuadBeam Engineering Team",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4",
+    "@playwright/test": "^1.48.2"
+  }
+}

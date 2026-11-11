@@ -1,0 +1,582 @@
+/**
+ * QuadBeam UI Components, 4-QR Optical Stage, Camera Viewport, & Bottom Progress Bar
+ */
+
+/* Action Card */
+.qb-action-card {
+  background-color: var(--qb-surface-primary);
+  border: 1px solid var(--qb-border);
+  border-radius: var(--qb-radius-xl);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.35rem;
+  box-shadow: var(--qb-shadow-md);
+  transition: transform var(--qb-transition-fast), border-color var(--qb-transition-fast), box-shadow var(--qb-transition-fast);
+  text-align: left;
+  cursor: pointer;
+}
+
+.qb-action-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--qb-accent);
+  box-shadow: var(--qb-shadow-lg);
+}
+
+.qb-action-card-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background-color: var(--qb-accent-subtle);
+  color: var(--qb-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qb-action-card-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--qb-text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.qb-action-card-desc {
+  font-size: 0.95rem;
+  color: var(--qb-text-secondary);
+}
+
+/* Benefit Pill */
+.qb-benefit-card {
+  background-color: var(--qb-surface-primary);
+  border: 1px solid var(--qb-border);
+  border-radius: var(--qb-radius-lg);
+  padding: 1rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  box-shadow: var(--qb-shadow-sm);
+}
+
+.qb-benefit-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background-color: var(--qb-surface-secondary);
+  color: var(--qb-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.qb-benefit-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--qb-text-primary);
+}
+
+.qb-benefit-sub {
+  font-size: 0.78rem;
+  color: var(--qb-text-secondary);
+}
+
+/* Buttons */
+.qb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.15rem;
+  border-radius: var(--qb-radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-height: 42px;
+  transition: all var(--qb-transition-fast);
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.qb-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qb-btn-primary {
+  background-color: var(--qb-accent);
+  color: #FFFFFF;
+}
+
+.qb-btn-primary:hover:not(:disabled) {
+  background-color: var(--qb-accent-hover);
+}
+
+.qb-btn-secondary {
+  background-color: var(--qb-surface-secondary);
+  color: var(--qb-text-primary);
+  border-color: var(--qb-border);
+}
+
+.qb-btn-secondary:hover:not(:disabled) {
+  border-color: var(--qb-accent);
+  background-color: var(--qb-accent-subtle);
+}
+
+.qb-btn-danger {
+  background-color: var(--qb-danger-subtle);
+  color: var(--qb-danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.qb-btn-icon {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: var(--qb-radius-md);
+  background-color: var(--qb-surface-secondary);
+  color: var(--qb-text-primary);
+  border: 1px solid var(--qb-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--qb-transition-fast);
+}
+
+.qb-btn-icon:hover {
+  border-color: var(--qb-accent);
+  color: var(--qb-accent);
+}
+
+/* Panels & Cards */
+.qb-panel {
+  background-color: var(--qb-surface-primary);
+  border: 1px solid var(--qb-border);
+  border-radius: var(--qb-radius-xl);
+  padding: 1.35rem;
+  box-shadow: var(--qb-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.qb-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.qb-panel-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--qb-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Drag and Drop Zone */
+.qb-dropzone {
+  border: 2px dashed var(--qb-border);
+  border-radius: var(--qb-radius-lg);
+  background-color: var(--qb-surface-secondary);
+  padding: 1.75rem 1.25rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+  transition: border-color var(--qb-transition-fast), background-color var(--qb-transition-fast);
+}
+
+.qb-dropzone:hover,
+.qb-dropzone.dragover {
+  border-color: var(--qb-accent);
+  background-color: var(--qb-accent-subtle);
+}
+
+/* File Queue List */
+.qb-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.qb-queue-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--qb-radius-md);
+  background-color: var(--qb-surface-secondary);
+  border: 1px solid var(--qb-border);
+}
+
+.qb-queue-item.active {
+  border-color: var(--qb-accent);
+  background-color: var(--qb-accent-subtle);
+}
+
+.qb-queue-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background-color: var(--qb-surface-primary);
+  border: 1px solid var(--qb-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--qb-accent);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.qb-queue-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.qb-queue-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.qb-queue-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qb-queue-meta {
+  font-size: 0.75rem;
+  color: var(--qb-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* FOUR-QR OPTICAL TRANSMISSION STAGE */
+.qb-optical-stage {
+  background-color: var(--qb-surface-primary);
+  border: 1px solid var(--qb-border);
+  border-radius: var(--qb-radius-xl);
+  padding: 1.25rem;
+  box-shadow: var(--qb-shadow-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  min-height: 460px;
+  position: relative;
+}
+
+.qb-optical-stage:fullscreen,
+.qb-optical-stage.qb-fullscreen-active {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  border-radius: 0;
+  border: none;
+  background-color: #050608;
+  color: #E3EAF4;
+  justify-content: space-between;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.qb-stage-toolbar {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--qb-surface-secondary);
+  border: 1px solid var(--qb-border);
+  border-radius: var(--qb-radius-md);
+}
+
+.qb-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Synchronized 1 / 2 / 4 QR Code Grid */
+.qb-qr-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--qb-grid-cols, 2), auto);
+  grid-template-rows: repeat(var(--qb-grid-rows, 2), auto);
+  gap: 16px;
+  justify-content: center;
+  align-content: center;
+  margin: auto;
+  padding: 12px;
+}
+
+.qb-qr-panel {
+  background-color: #FFFFFF;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #DFE7F2;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.qb-high-contrast .qb-qr-panel {
+  padding: 16px;
+  border: 3px solid #000000;
+  box-shadow: none;
+}
+
+.qb-qr-canvas {
+  display: block;
+  background-color: #FFFFFF;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  max-width: 100%;
+  height: auto;
+}
+
+.qb-qr-panel-meta {
+  font-family: var(--qb-font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.04em;
+}
+
+/* Receiver Camera Viewport */
+.qb-camera-stage {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+  background-color: #070A10;
+  border-radius: var(--qb-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--qb-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qb-camera-video {
+  width: 100%;
+  height: 100%;
+  max-height: 540px;
+  object-fit: cover;
+  display: block;
+}
+
+.qb-camera-video.mirrored {
+  transform: scaleX(-1);
+}
+
+.qb-camera-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.qb-reticle-guide {
+  position: absolute;
+  inset: 10%;
+  border: 2px dashed rgba(119, 170, 239, 0.55);
+  border-radius: 16px;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+}
+
+.qb-reticle-quad {
+  border: 1px solid rgba(119, 170, 239, 0.25);
+  border-radius: 8px;
+}
+
+/* Telemetry Stat Pills */
+.qb-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.qb-stat-box {
+  background-color: var(--qb-surface-secondary);
+  border: 1px solid var(--qb-border);
+  border-radius: var(--qb-radius-md);
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.qb-stat-label {
+  font-size: 0.72rem;
+  color: var(--qb-text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.qb-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--qb-text-primary);
+  font-family: var(--qb-font-mono);
+}
+
+/* Compact Bottom Progress Bar */
+.qb-bottom-progress {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 45;
+  background-color: var(--qb-surface-primary);
+  border-top: 1px solid var(--qb-border);
+  box-shadow: var(--qb-shadow-lg);
+  padding: 0.75rem 1.5rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.qb-progress-track {
+  width: 100%;
+  height: 8px;
+  background-color: var(--qb-surface-secondary);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--qb-border);
+}
+
+.qb-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--qb-accent), #34D399);
+  border-radius: 999px;
+  transition: width 120ms linear;
+}
+
+/* Modals & Drawers */
+.qb-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background-color: rgba(5, 6, 8, 0.65);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.qb-modal-backdrop.open {
+  display: flex;
+}
+
+.qb-modal {
+  background-color: var(--qb-surface-primary);
+  border: 1px solid var(--qb-border);
+  border-radius: var(--qb-radius-xl);
+  width: 100%;
+  max-width: 720px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--qb-shadow-lg);
+  overflow: hidden;
+}
+
+.qb-modal-header {
+  padding: 1.15rem 1.5rem;
+  border-bottom: 1px solid var(--qb-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.qb-modal-body {
+  padding: 1.35rem 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Toast Notifications */
+.qb-toast-container {
+  position: fixed;
+  top: 4.5rem;
+  right: 1.25rem;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 380px;
+}
+
+.qb-toast {
+  background-color: var(--qb-surface-primary);
+  border: 1px solid var(--qb-border);
+  border-left: 4px solid var(--qb-accent);
+  border-radius: var(--qb-radius-md);
+  padding: 0.85rem 1rem;
+  box-shadow: var(--qb-shadow-md);
+  font-size: 0.875rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.qb-toast.error {
+  border-left-color: var(--qb-danger);
+}
+
+.qb-toast.success {
+  border-left-color: var(--qb-success);
+}
+
+/* Form Controls */
+.qb-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--qb-border);
+}
+
+.qb-select,
+.qb-input {
+  background-color: var(--qb-surface-secondary);
+  border: 1px solid var(--qb-border);
+  border-radius: var(--qb-radius-sm);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--qb-text-primary);
+  min-height: 38px;
+}

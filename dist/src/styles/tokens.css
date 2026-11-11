@@ -1,0 +1,118 @@
+/**
+ * QuadBeam Design Tokens (Light & Dark AMOLED Themes)
+ */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../fonts/Inter-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../../fonts/Inter-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../../fonts/Inter-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../../fonts/Inter-Bold.woff2') format('woff2');
+}
+
+:root,
+[data-theme="light"] {
+  --qb-bg: #F7F9FC;
+  --qb-surface-primary: #FFFFFF;
+  --qb-surface-secondary: #EEF3FA;
+  --qb-text-primary: #17243A;
+  --qb-text-secondary: #68768A;
+  --qb-accent: #477FDF;
+  --qb-accent-hover: #356BCA;
+  --qb-accent-subtle: #E8F1FF;
+  --qb-border: #DFE7F2;
+
+  --qb-success: #10B981;
+  --qb-success-subtle: #ECFDF5;
+  --qb-warning: #F59E0B;
+  --qb-warning-subtle: #FFFBEB;
+  --qb-danger: #EF4444;
+  --qb-danger-subtle: #FEF2F2;
+
+  --qb-shadow-sm: 0 2px 6px rgba(23, 36, 58, 0.04), 0 1px 2px rgba(23, 36, 58, 0.03);
+  --qb-shadow-md: 0 8px 24px rgba(23, 36, 58, 0.06), 0 2px 6px rgba(23, 36, 58, 0.04);
+  --qb-shadow-lg: 0 18px 42px rgba(23, 36, 58, 0.09), 0 4px 12px rgba(23, 36, 58, 0.05);
+
+  --qb-radius-sm: 8px;
+  --qb-radius-md: 12px;
+  --qb-radius-lg: 16px;
+  --qb-radius-xl: 22px;
+
+  --qb-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --qb-font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+
+  --qb-pad-unit: 1rem;
+  --qb-transition-fast: 150ms cubic-bezier(0.2, 0, 0, 1);
+  --qb-transition-med: 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+[data-theme="dark"] {
+  --qb-bg: #050608;
+  --qb-surface-primary: #10131A;
+  --qb-surface-secondary: #181D27;
+  --qb-text-primary: #E3EAF4;
+  --qb-text-secondary: #98A6B8;
+  --qb-accent: #77AAEF;
+  --qb-accent-hover: #8FBBF7;
+  --qb-accent-subtle: #142338;
+  --qb-border: #282F3D;
+
+  --qb-success: #34D399;
+  --qb-success-subtle: rgba(16, 185, 129, 0.14);
+  --qb-warning: #FBBF24;
+  --qb-warning-subtle: rgba(245, 158, 11, 0.15);
+  --qb-danger: #F87171;
+  --qb-danger-subtle: rgba(239, 68, 68, 0.15);
+
+  --qb-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --qb-shadow-md: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --qb-shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.65);
+}
+
+[data-accent="cobalt"] {
+  --qb-accent: #2563EB;
+  --qb-accent-hover: #1D4ED8;
+}
+
+[data-theme="dark"][data-accent="cobalt"] {
+  --qb-accent: #60A5FA;
+  --qb-accent-hover: #93C5FD;
+}
+
+[data-accent="cyan"] {
+  --qb-accent: #0284C7;
+  --qb-accent-hover: #0369A1;
+}
+
+[data-theme="dark"][data-accent="cyan"] {
+  --qb-accent: #38BDF8;
+  --qb-accent-hover: #7DD3FC;
+}
+
+[data-density="compact"] {
+  --qb-pad-unit: 0.75rem;
+}
